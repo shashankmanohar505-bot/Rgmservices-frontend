@@ -1,4 +1,4 @@
-const PROD_API_BASE = 'https://rgms-backend.vercel.app/api';
+const PROD_API_BASE = 'https://rgmservices-backend.vercel.app/api';
 const LOCAL_API_BASE = 'http://localhost:5000/api';
 
 let ACTIVE_API_BASE = PROD_API_BASE;
