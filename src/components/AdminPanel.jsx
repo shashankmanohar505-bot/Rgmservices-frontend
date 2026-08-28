@@ -185,6 +185,59 @@ export const AdminPanel = () => {
     setIsModalOpen(true);
   };
 
+  // Compress image on the client side using HTML5 Canvas
+  const compressImageFile = (file) => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = (event) => {
+        const img = new Image();
+        img.src = event.target.result;
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+
+          // Max dimension limit for product catalog images (e.g. 1000px max)
+          const MAX_WIDTH = 1000;
+          const MAX_HEIGHT = 1000;
+
+          if (width > height) {
+            if (width > MAX_WIDTH) {
+              height = Math.round((height * MAX_WIDTH) / width);
+              width = MAX_WIDTH;
+            }
+          } else {
+            if (height > MAX_HEIGHT) {
+              width = Math.round((width * MAX_HEIGHT) / height);
+              height = MAX_HEIGHT;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+
+          // Output compressed image as a blob (WebP if supported, otherwise JPEG, quality 0.75)
+          const fileType = file.type === 'image/png' ? 'image/png' : 'image/jpeg';
+          canvas.toBlob((blob) => {
+            if (!blob) {
+              resolve(file);
+              return;
+            }
+            const compressedFile = new File([blob], file.name, {
+              type: fileType,
+              lastModified: Date.now()
+            });
+            resolve(compressedFile);
+          }, fileType, 0.75);
+        };
+      };
+      reader.onerror = () => resolve(file);
+    });
+  };
+
   // Image Upload handler (Cloudinary API integration)
   const handleImageFileChange = async (e) => {
     const file = e.target.files[0];
@@ -192,7 +245,9 @@ export const AdminPanel = () => {
 
     setUploadingImage(true);
     try {
-      const uploadedUrl = await uploadProductImageAPI(file);
+      // Compress the image before uploading to reduce serverless payload & bandwidth usage
+      const compressedFile = await compressImageFile(file);
+      const uploadedUrl = await uploadProductImageAPI(compressedFile);
       setFormData((prev) => ({ ...prev, image: uploadedUrl }));
       toast.success('Product image uploaded successfully!');
     } catch (err) {
