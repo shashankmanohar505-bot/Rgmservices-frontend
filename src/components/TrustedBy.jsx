@@ -7,13 +7,13 @@ import React from 'react';
 const wm = (text, color, sub) => ({ text, color, sub });
 
 export const clientLogos = [
-  { name: 'D.A.V. College', src: '/LOGO.png' },
+  { name: 'D.A.V. College', src: '/dav-logo.png' },
   { name: 'DXN', src: '/dxn-logo.png' },
-  { name: 'Kalpavriksha', src: '/logo (1).png' },
-  { name: 'Patliputra Logistics', src: '/logo-3-164x47.png' },
-  { name: 'NBET Total Logistic Solutions', src: '/logo.jpeg' },
-  { name: 'Hotel Rudra Residency', src: '/rr-logo.webp' },
-  { name: 'Trackon', src: '/trackon_logo.png' },
+  { name: 'Kalpavriksha', src: '/kalpavriksha-logo.png' },
+  { name: 'Patliputra Logistics', src: '/patliputra-logo.png' },
+  { name: 'NBET Total Logistic Solutions', src: '/nbet-logo.jpeg' },
+  { name: 'Hotel Rudra Residency', src: '/rudra-residency-logo.webp' },
+  { name: 'Trackon', src: '/trackon-logo.png' },
 ];
 
 const LogoTile = ({ logo }) => {
