@@ -7,6 +7,7 @@ import ProductCard from './ProductCard';
 import FAQSection from './FAQSection';
 import { useCart } from '../context/CartContext';
 import { useProducts } from '../context/ProductContext';
+import { ProductDetailPageSkeleton } from './ProductLoader';
 import { formatPrice, convertToSlug } from '../mock/mock';
 import { toast } from 'sonner';
 import { 
@@ -18,7 +19,7 @@ export const ProductDetailPage = () => {
   const { id: rawId } = useParams();
   const id = rawId && rawId.includes('prod-') ? 'prod-' + rawId.split('prod-').pop() : rawId;
   const navigate = useNavigate();
-  const { products } = useProducts();
+  const { products, loading } = useProducts();
   const { addToCart, setOpen } = useCart();
   const [quantity, setQuantity] = useState(1);
   const [activeTab, setActiveTab] = useState('description');
@@ -30,6 +31,11 @@ export const ProductDetailPage = () => {
 
   // Find product by ID
   const product = products.find((p) => String(p.id) === String(id));
+
+  // If products are currently loading from API/store, render the skeleton loader
+  if (loading && !product) {
+    return <ProductDetailPageSkeleton />;
+  }
 
   if (!product) {
     return (

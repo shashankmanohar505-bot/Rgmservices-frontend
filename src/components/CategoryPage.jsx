@@ -5,6 +5,7 @@ import { Footer, WhatsAppIcon } from './BottomSections';
 import { dealsProducts, formatPrice, newArrivals, bestSellers, convertToSlug } from '../mock/mock';
 import { useCart } from '../context/CartContext';
 import { useProducts } from '../context/ProductContext';
+import { ProductGridSkeleton } from './ProductLoader';
 import SEO from './SEO';
 import { 
   ShieldCheck, Zap, Lock, Mic, Battery, Radio, CheckCircle2, 
@@ -837,7 +838,7 @@ export const CategoryPage = () => {
   const { slug } = useParams();
   const navigate = useNavigate();
   const { addToCart } = useCart();
-  const { products: contextProducts } = useProducts();
+  const { products: contextProducts, loading } = useProducts();
   const [activeFilter, setActiveFilter] = useState('all');
   const [sortBy, setSortBy] = useState('featured');
   const [selectedProduct, setSelectedProduct] = useState(null);
@@ -1033,15 +1034,21 @@ export const CategoryPage = () => {
         <div className="flex items-center justify-between mb-8">
           <div>
             <h2 className="text-2xl font-black text-[#07152e]">Available {config.name} Models</h2>
-            <p className="text-xs text-[#64748b] font-medium mt-1">Showing {filteredProducts.length} premium models with dedicated customer support</p>
+            <p className="text-xs text-[#64748b] font-medium mt-1">
+              {loading 
+                ? 'Syncing live product catalog with real-time stock & prices...' 
+                : `Showing ${filteredProducts.length} premium models with dedicated customer support`}
+            </p>
           </div>
           <Link to="/" className="text-xs font-extrabold text-[#082f89] hover:underline flex items-center gap-1">
             <ArrowLeft size={14} /> Back to Homepage
           </Link>
         </div>
 
-        {/* Products Grid */}
-        {filteredProducts.length === 0 ? (
+        {/* Products Grid & Loading State */}
+        {loading && filteredProducts.length === 0 ? (
+          <ProductGridSkeleton count={8} message={`Loading ${config.name} models...`} />
+        ) : filteredProducts.length === 0 ? (
           <div className="col-span-full py-16 text-center bg-white rounded-3xl p-8 border border-slate-200 shadow-sm space-y-4 max-w-xl mx-auto my-6">
             <div className="w-16 h-16 bg-[#e8eeff] text-[#082f89] rounded-2xl flex items-center justify-center mx-auto shadow-inner">
               <ShieldCheck size={36} />

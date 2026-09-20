@@ -47,7 +47,7 @@ export const ProductProvider = ({ children }) => {
     return [];
   });
 
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedProduct, setSelectedProduct] = useState(null);
 

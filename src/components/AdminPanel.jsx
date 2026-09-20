@@ -836,7 +836,16 @@ export const AdminPanel = () => {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 text-xs font-semibold text-[#07152e]">
-                      {filteredProducts.length === 0 ? (
+                      {loading ? (
+                        <tr>
+                          <td colSpan={6} className="py-12 text-center text-[#082f89]">
+                            <div className="flex flex-col items-center justify-center gap-2">
+                              <RefreshCw size={24} className="animate-spin text-[#082f89]" />
+                              <span className="font-bold text-xs text-slate-600">Loading live inventory catalog...</span>
+                            </div>
+                          </td>
+                        </tr>
+                      ) : filteredProducts.length === 0 ? (
                         <tr>
                           <td colSpan={6} className="py-10 text-center text-slate-400 font-bold">
                             No products found matching your search query.

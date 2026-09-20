@@ -5,6 +5,7 @@ import ProductCard from './ProductCard';
 import useCarousel from '../hooks/useCarousel';
 import { NavArrow, Dots } from './CarouselControls';
 import { useProducts } from '../context/ProductContext';
+import { ProductCarouselSkeleton } from './ProductLoader';
 
 const getTarget = () => {
   const saved = localStorage.getItem('rgms_deal_target');
@@ -50,8 +51,8 @@ const Countdown = () => {
 
 
 const DealsSection = () => {
-  const { dealsProductsList } = useProducts();
-  const activeDeals = dealsProductsList && dealsProductsList.length > 0 ? dealsProductsList : fallbackDealsProducts;
+  const { dealsProductsList, loading } = useProducts();
+  const activeDeals = dealsProductsList && dealsProductsList.length > 0 ? dealsProductsList : (loading ? [] : fallbackDealsProducts);
   const carousel = useCarousel({ autoplay: false });
 
   return (
@@ -69,7 +70,9 @@ const DealsSection = () => {
           <Countdown />
         </div>
 
-        {activeDeals.length === 0 ? (
+        {loading && activeDeals.length === 0 ? (
+          <ProductCarouselSkeleton count={4} />
+        ) : activeDeals.length === 0 ? (
           <div className="bg-white rounded-2xl p-8 text-center border border-slate-200 shadow-sm text-slate-500 font-bold text-xs sm:text-sm">
             No deal products currently listed. Add or flag products in the Admin Panel to display here!
           </div>

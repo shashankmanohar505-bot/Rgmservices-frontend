@@ -6,12 +6,16 @@ import ProductCard from './ProductCard';
 import useCarousel from '../hooks/useCarousel';
 import { NavArrow, Dots } from './CarouselControls';
 import { useProducts } from '../context/ProductContext';
+import { ProductCarouselSkeleton } from './ProductLoader';
 
 const brandIconMap = { projector: Projector, car: Car, gamepad: Gamepad2, mic: Mic2 };
 const usageIconMap = { briefcase: Briefcase, baby: Baby, users: Users, sun: Sun, store: Store, paw: PawPrint };
 
-const CarouselRow = ({ products, testId }) => {
+const CarouselRow = ({ products, testId, loading = false }) => {
   const carousel = useCarousel({ autoplay: false });
+  if (loading && (!products || products.length === 0)) {
+    return <ProductCarouselSkeleton count={4} />;
+  }
   if (!products || products.length === 0) {
     return (
       <div className="bg-white rounded-2xl p-8 text-center border border-slate-200 shadow-sm text-slate-500 font-bold text-xs sm:text-sm">
@@ -58,14 +62,14 @@ const SectionHeader = ({ title, subtitle, testId, linkTo = '/products' }) => (
 );
 
 export const NewArrivals = () => {
-  const { newArrivalsList } = useProducts();
-  const activeNewArrivals = newArrivalsList && newArrivalsList.length > 0 ? newArrivalsList : fallbackNewArrivals;
+  const { newArrivalsList, loading } = useProducts();
+  const activeNewArrivals = newArrivalsList && newArrivalsList.length > 0 ? newArrivalsList : (loading ? [] : fallbackNewArrivals);
 
   return (
     <section className="bg-[#f1f5f9] py-12 md:py-16" data-testid="new-arrivals-section">
       <div className="max-w-[1280px] mx-auto px-4 lg:px-8">
         <SectionHeader title="New Arrivals" subtitle="The latest additions to our family" testId="new-arrivals-title" />
-        <CarouselRow products={activeNewArrivals} testId="new-arrivals-scroller" />
+        <CarouselRow products={activeNewArrivals} loading={loading} testId="new-arrivals-scroller" />
       </div>
     </section>
   );
@@ -140,14 +144,14 @@ export const BrandSection = () => (
 );
 
 export const BestSellers = () => {
-  const { bestSellersList } = useProducts();
-  const activeBestSellers = bestSellersList && bestSellersList.length > 0 ? bestSellersList : fallbackBestSellers;
+  const { bestSellersList, loading } = useProducts();
+  const activeBestSellers = bestSellersList && bestSellersList.length > 0 ? bestSellersList : (loading ? [] : fallbackBestSellers);
 
   return (
     <section className="bg-white py-14 md:py-16" data-testid="best-sellers-section">
       <div className="max-w-[1280px] mx-auto px-4 lg:px-8">
         <SectionHeader title="Best Sellers" subtitle="Our most popular AI cameras" testId="best-sellers-title" />
-        <CarouselRow products={activeBestSellers} testId="best-sellers-scroller" />
+        <CarouselRow products={activeBestSellers} loading={loading} testId="best-sellers-scroller" />
       </div>
     </section>
   );
