@@ -30,13 +30,35 @@ const getAuthHeaders = () => {
   return token ? { 'Authorization': `Bearer ${token}` } : {};
 };
 
+// Resolve product image path to absolute backend URL if it is a relative API image endpoint
+export const resolveImageUrl = (imageUrl) => {
+  if (!imageUrl) return '/assets/asset-1.png';
+  if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://') || imageUrl.startsWith('data:')) {
+    return imageUrl;
+  }
+  if (imageUrl.startsWith('/api/')) {
+    const apiRoot = (ACTIVE_API_BASE || PROD_API_BASE).replace(/\/api\/?$/, '');
+    return `${apiRoot}${imageUrl}`;
+  }
+  return imageUrl;
+};
+
 // Fetch products from backend
 export const fetchProductsFromAPI = async (category = 'all') => {
   try {
     const baseUrl = await getApiBase();
-    const res = await fetch(`${baseUrl}/products?category=${category}`);
+    const res = await fetch(`${baseUrl}/products?category=${category}`, {
+      signal: AbortSignal.timeout(8000)
+    });
     if (!res.ok) throw new Error('Failed to fetch products');
-    return await res.json();
+    const data = await res.json();
+    if (Array.isArray(data)) {
+      return data.map((p) => ({
+        ...p,
+        image: resolveImageUrl(p.image)
+      }));
+    }
+    return data;
   } catch (err) {
     console.warn('Backend API fetch error:', err.message);
     return null;

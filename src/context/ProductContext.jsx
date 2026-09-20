@@ -31,23 +31,34 @@ const initialMockProducts = () => {
 
 export const ProductProvider = ({ children }) => {
   const [products, setProducts] = useState(() => {
-    const saved = localStorage.getItem('rgms_products');
-    if (saved !== null) {
-      try {
+    try {
+      const saved = localStorage.getItem('rgms_products');
+      if (saved !== null) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) {
+        if (Array.isArray(parsed) && parsed.length > 0) {
           return parsed.filter((p) => !p.id?.startsWith('gps-') && !p.id?.startsWith('deal-') && !p.id?.startsWith('new-') && !p.id?.startsWith('best-'));
         }
-      } catch (e) {
-        // ignore
       }
+    } catch (e) {
+      // ignore
     }
-    // Default to empty array (no default mock products)
-    localStorage.setItem('rgms_products', JSON.stringify([]));
     return [];
   });
 
-  const [loading, setLoading] = useState(true);
+  // Stale-While-Revalidate: Instant 0ms render if cached products exist
+  const [loading, setLoading] = useState(() => {
+    try {
+      const saved = localStorage.getItem('rgms_products');
+      if (saved !== null) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return false;
+        }
+      }
+    } catch (e) {}
+    return true;
+  });
+
   const [error, setError] = useState(null);
   const [selectedProduct, setSelectedProduct] = useState(null);
 
@@ -59,9 +70,16 @@ export const ProductProvider = ({ children }) => {
     setSelectedProduct(null);
   };
 
-  // Sync products from Express backend REST API
+  // Sync products from Express backend REST API in background
   const refreshProducts = useCallback(async () => {
-    setLoading(true);
+    // If no products in cache, show skeleton indicator
+    setProducts((current) => {
+      if (!current || current.length === 0) {
+        setLoading(true);
+      }
+      return current;
+    });
+
     try {
       const apiData = await fetchProductsFromAPI('all');
       if (apiData && Array.isArray(apiData)) {
@@ -69,7 +87,11 @@ export const ProductProvider = ({ children }) => {
           (p) => !p.id?.startsWith('gps-') && !p.id?.startsWith('deal-') && !p.id?.startsWith('new-') && !p.id?.startsWith('best-')
         );
         setProducts(realProducts);
-        localStorage.setItem('rgms_products', JSON.stringify(realProducts));
+        try {
+          localStorage.setItem('rgms_products', JSON.stringify(realProducts));
+        } catch (e) {
+          console.warn('localStorage quota warning:', e.message);
+        }
         setError(null);
       }
     } catch (err) {
