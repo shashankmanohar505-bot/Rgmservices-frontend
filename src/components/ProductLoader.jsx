@@ -105,6 +105,53 @@ export const ProductCarouselSkeleton = ({ count = 4 }) => {
 };
 
 /**
+ * Hero Product Carousel Skeleton
+ * Used in HeroProduct.jsx while slides are loading from DB/API
+ */
+export const HeroProductSkeleton = () => {
+  return (
+    <div className="relative bg-gradient-to-b from-[#e8eeff] via-[#f1f5f9] to-[#ffffff] overflow-hidden py-10 md:py-14 lg:py-16 animate-pulse" aria-busy="true" aria-label="Loading carousel">
+      <div className="max-w-[1280px] mx-auto px-4 lg:px-8">
+        <div className="grid lg:grid-cols-2 gap-10 items-center">
+          {/* Left skeleton */}
+          <div className="space-y-4">
+            <div className="w-28 h-6 bg-slate-300 rounded-full mb-3" />
+            <div className="h-9 bg-slate-300 rounded-lg w-4/5" />
+            <div className="h-9 bg-slate-300 rounded-lg w-3/5" />
+            <div className="h-4 bg-slate-200 rounded w-11/12 mt-4" />
+            <div className="h-4 bg-slate-200 rounded w-3/4" />
+            <div className="flex gap-3 pt-4">
+              <div className="w-32 h-11 bg-slate-300 rounded-full" />
+              <div className="w-32 h-11 bg-slate-200 rounded-full" />
+            </div>
+            <div className="grid grid-cols-3 gap-4 pt-6 mt-4 border-t border-slate-200/60">
+              <div className="space-y-2">
+                <div className="w-20 h-5 bg-slate-300 rounded" />
+                <div className="w-14 h-3 bg-slate-200 rounded" />
+              </div>
+              <div className="space-y-2">
+                <div className="w-20 h-5 bg-slate-300 rounded" />
+                <div className="w-14 h-3 bg-slate-200 rounded" />
+              </div>
+              <div className="space-y-2">
+                <div className="w-20 h-5 bg-slate-300 rounded" />
+                <div className="w-14 h-3 bg-slate-200 rounded" />
+              </div>
+            </div>
+          </div>
+          {/* Right image card skeleton */}
+          <div className="flex justify-center">
+            <div className="bg-white rounded-3xl p-8 w-[280px] sm:w-[340px] md:w-[380px] h-[280px] sm:h-[320px] md:h-[350px] border border-slate-100 flex items-center justify-center relative shadow-sm">
+              <div className="w-40 h-40 bg-slate-200/80 rounded-2xl" />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+/**
  * Standalone Branded Spinner
  */
 export const ProductSpinner = ({ label = "Loading...", size = "md" }) => {

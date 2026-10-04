@@ -3,19 +3,23 @@ import { Link } from 'react-router-dom';
 import { useProducts } from '../context/ProductContext';
 import { 
   loginAdminAPI, uploadProductImageAPI, verifyTokenAPI, 
-  fetchContactMessagesAPI, markContactMessageReadAPI, deleteContactMessageAPI 
+  fetchContactMessagesAPI, markContactMessageReadAPI, deleteContactMessageAPI,
+  resolveImageUrl
 } from '../services/api';
 import SEO from './SEO';
 import { WhatsAppIcon } from './BottomSections';
 import { 
   Package, Plus, Edit3, Trash2, Search, SlidersHorizontal, 
   ShieldCheck, Upload, LogOut, Lock, User, CheckCircle2, X, RefreshCw, Layers, Sparkles, Image as ImageIcon,
-  MessageSquare, Mail, Phone, Clock, Eye, Check, ArrowLeft
+  MessageSquare, Mail, Phone, Clock, Eye, Check, ArrowLeft, Sliders
 } from 'lucide-react';
 import { toast } from 'sonner';
 
 export const AdminPanel = () => {
-  const { products, addProduct, updateProduct, deleteProduct, clearAllProducts, refreshProducts, loading } = useProducts();
+  const { 
+    products, addProduct, updateProduct, deleteProduct, clearAllProducts, refreshProducts, loading,
+    heroSlides, heroSlidesLoading, addHeroSlide, updateHeroSlide, deleteHeroSlide, refreshHeroSlides
+  } = useProducts();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   const handleClearAll = async () => {
@@ -26,13 +30,39 @@ export const AdminPanel = () => {
   };
   const [authChecking, setAuthChecking] = useState(true);
 
-  // Tab State: 'products' | 'messages'
+  // Tab State: 'products' | 'slides' | 'messages'
   const [activeTab, setActiveTab] = useState('products');
 
   // Contact Messages State
   const [messages, setMessages] = useState([]);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [selectedMessage, setSelectedMessage] = useState(null);
+
+  // Hero Slide Add/Edit Modal State
+  const [isSlideModalOpen, setIsSlideModalOpen] = useState(false);
+  const [editingSlide, setEditingSlide] = useState(null);
+  const [uploadingSlideImage, setUploadingSlideImage] = useState(false);
+  const [slideFormData, setSlideFormData] = useState({
+    badge: "Expert's Choice",
+    titleLine1: '',
+    titleLine2: '',
+    subtitle: '',
+    image: '',
+    price: 3499,
+    buttonText: 'View Camera',
+    buttonLink: '/products',
+    floatTopLeftTitle: '2 Way Talk',
+    floatTopLeftIcon: 'mic',
+    floatRightTitle: 'SD Card + Cloud',
+    floatRightIcon: 'sd',
+    spec1Value: '5MP + 5MP + 5MP',
+    spec1Label: 'Full HD Lens',
+    spec2Value: '30m IR',
+    spec2Label: 'Color Night Vision',
+    spec3Value: '360 degrees',
+    spec3Label: 'Pan Tilt',
+    order: 0
+  });
 
   // Login form state
   const [loginUsername, setLoginUsername] = useState('');
@@ -301,13 +331,148 @@ export const AdminPanel = () => {
     }
   };
 
-  const handleDeleteProduct = async (id, name) => {
-    if (window.confirm(`Are you sure you want to delete "${name}" from inventory?`)) {
+  // Hero Slides Modal Handlers
+  const openAddSlideModal = () => {
+    setEditingSlide(null);
+    setSlideFormData({
+      badge: "Expert's Choice",
+      titleLine1: '',
+      titleLine2: '',
+      subtitle: '',
+      image: '',
+      price: 3499,
+      buttonText: 'View Camera',
+      buttonLink: '/products',
+      floatTopLeftTitle: '2 Way Talk',
+      floatTopLeftIcon: 'mic',
+      floatRightTitle: 'SD Card + Cloud',
+      floatRightIcon: 'sd',
+      spec1Value: '5MP + 5MP + 5MP',
+      spec1Label: 'Full HD Lens',
+      spec2Value: '30m IR',
+      spec2Label: 'Color Night Vision',
+      spec3Value: '360 degrees',
+      spec3Label: 'Pan Tilt',
+      order: heroSlides?.length || 0
+    });
+    setIsSlideModalOpen(true);
+  };
+
+  const openEditSlideModal = (slide) => {
+    setEditingSlide(slide);
+    const specs = Array.isArray(slide.specs) ? slide.specs : [];
+    setSlideFormData({
+      badge: slide.badge || "Expert's Choice",
+      titleLine1: slide.titleLine1 || '',
+      titleLine2: slide.titleLine2 || '',
+      subtitle: slide.subtitle || '',
+      image: slide.image || '',
+      price: slide.price || 3499,
+      buttonText: slide.buttonText || 'View Camera',
+      buttonLink: slide.buttonLink || '/products',
+      floatTopLeftTitle: slide.floatTopLeft?.title || '2 Way Talk',
+      floatTopLeftIcon: slide.floatTopLeft?.icon || 'mic',
+      floatRightTitle: slide.floatRight?.title || 'SD Card + Cloud',
+      floatRightIcon: slide.floatRight?.icon || 'sd',
+      spec1Value: specs[0]?.value || '',
+      spec1Label: specs[0]?.label || '',
+      spec2Value: specs[1]?.value || '',
+      spec2Label: specs[1]?.label || '',
+      spec3Value: specs[2]?.value || '',
+      spec3Label: specs[2]?.label || '',
+      order: slide.order || 0
+    });
+    setIsSlideModalOpen(true);
+  };
+
+  const handleSlideImageUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error('Image size must be less than 10MB');
+      return;
+    }
+
+    setUploadingSlideImage(true);
+    try {
+      const compressedFile = await compressImageFile(file);
+      const uploadedResult = await uploadProductImageAPI(compressedFile);
+      const finalUrl = typeof uploadedResult === 'string' ? uploadedResult : (uploadedResult?.url || uploadedResult);
+      if (finalUrl) {
+        setSlideFormData((prev) => ({ ...prev, image: finalUrl }));
+        toast.success('Slide image uploaded to Cloudinary successfully!');
+      } else {
+        throw new Error('No URL returned');
+      }
+    } catch (err) {
+      console.warn('Upload error, using local base64 preview:', err);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setSlideFormData((prev) => ({ ...prev, image: reader.result }));
+        toast.info('Image loaded for slide');
+      };
+      reader.readAsDataURL(file);
+    } finally {
+      setUploadingSlideImage(false);
+      // Reset input value so same file can be re-selected if needed
+      e.target.value = '';
+    }
+  };
+
+  const handleSlideSubmit = async (e) => {
+    e.preventDefault();
+    if (!slideFormData.titleLine1.trim()) {
+      toast.error('Title Line 1 is required');
+      return;
+    }
+
+    const payload = {
+      badge: slideFormData.badge,
+      titleLine1: slideFormData.titleLine1.trim(),
+      titleLine2: slideFormData.titleLine2.trim(),
+      subtitle: slideFormData.subtitle.trim(),
+      image: slideFormData.image || '/assets/asset-19.png',
+      price: Number(slideFormData.price) || 3499,
+      buttonText: slideFormData.buttonText || 'View Camera',
+      buttonLink: slideFormData.buttonLink || '/products',
+      floatTopLeft: {
+        icon: slideFormData.floatTopLeftIcon,
+        title: slideFormData.floatTopLeftTitle
+      },
+      floatRight: {
+        icon: slideFormData.floatRightIcon,
+        title: slideFormData.floatRightTitle
+      },
+      specs: [
+        { value: slideFormData.spec1Value, label: slideFormData.spec1Label },
+        { value: slideFormData.spec2Value, label: slideFormData.spec2Label },
+        { value: slideFormData.spec3Value, label: slideFormData.spec3Label }
+      ].filter(s => s.value || s.label),
+      order: Number(slideFormData.order) || 0
+    };
+
+    try {
+      if (editingSlide) {
+        await updateHeroSlide(editingSlide.id, payload);
+        toast.success('Hero slide updated successfully!');
+      } else {
+        await addHeroSlide(payload);
+        toast.success('Hero slide created and added to carousel!');
+      }
+      setIsSlideModalOpen(false);
+    } catch (err) {
+      toast.error(err.message || 'Failed to save slide');
+    }
+  };
+
+  const handleDeleteSlide = async (id, title) => {
+    if (window.confirm(`Delete slide "${title}" from the main top carousel?`)) {
       try {
-        await deleteProduct(id);
-        toast.success(`Deleted ${name}`);
+        await deleteHeroSlide(id);
+        toast.success(`Deleted slide "${title}"`);
       } catch (err) {
-        toast.error(err.message || `Failed to delete "${name}"`);
+        toast.error(err.message || 'Failed to delete slide');
       }
     }
   };
@@ -743,6 +908,18 @@ export const AdminPanel = () => {
               </button>
 
               <button
+                onClick={() => setActiveTab('slides')}
+                className={`flex-1 py-3 px-4 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-2 ${
+                  activeTab === 'slides'
+                    ? 'bg-[#082f89] text-white shadow-md'
+                    : 'text-[#64748b] hover:bg-[#f1f5f9] hover:text-[#07152e]'
+                }`}
+              >
+                <Sliders size={16} />
+                <span>Hero Carousel Slides ({heroSlides?.length || 0})</span>
+              </button>
+
+              <button
                 onClick={() => setActiveTab('messages')}
                 className={`flex-1 py-3 px-4 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-2 relative ${
                   activeTab === 'messages'
@@ -1038,9 +1215,352 @@ export const AdminPanel = () => {
                 )}
               </div>
             )}
+
+            {/* Hero Carousel Slides Management Tab */}
+            {activeTab === 'slides' && (
+              <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm space-y-6">
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-b border-slate-100 pb-5">
+                  <div>
+                    <h2 className="text-xl font-black text-[#07152e]">Top Hero Carousel Slides</h2>
+                    <p className="text-xs text-[#64748b] font-medium mt-0.5">Customize titles, subtitles, specs, badges, and images appearing on the main home carousel.</p>
+                  </div>
+
+                  <div className="flex items-center gap-2.5 w-full sm:w-auto">
+                    <button
+                      onClick={openAddSlideModal}
+                      className="bg-[#082f89] hover:bg-[#0e45c4] text-white text-xs font-black px-5 py-3 rounded-2xl shadow-md transition-all active:scale-95 flex items-center justify-center gap-2"
+                    >
+                      <Plus size={18} />
+                      <span>Add New Slide</span>
+                    </button>
+                  </div>
+                </div>
+
+                {heroSlidesLoading ? (
+                  <div className="py-12 text-center text-xs font-bold text-slate-400 flex items-center justify-center gap-2">
+                    <RefreshCw className="animate-spin text-[#082f89]" size={18} />
+                    <span>Loading carousel slides from database...</span>
+                  </div>
+                ) : (!heroSlides || heroSlides.length === 0) ? (
+                  <div className="py-16 text-center text-xs font-bold text-slate-400">
+                    No carousel slides configured yet. Click "Add New Slide" above to create one.
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {heroSlides.map((slide, idx) => (
+                      <div
+                        key={slide.id}
+                        className="bg-[#f8fafc] border border-slate-200 rounded-3xl p-5 relative overflow-hidden flex flex-col justify-between hover:shadow-md transition-all"
+                      >
+                        <div className="space-y-3">
+                          <div className="flex items-start justify-between gap-3">
+                            <span className="bg-[#082f89] text-white text-[10.5px] font-black px-3 py-1 rounded-full uppercase tracking-wider shadow-xs">
+                              {slide.badge || "Slide #" + (idx + 1)}
+                            </span>
+                            <div className="flex items-center gap-1.5">
+                              <button
+                                onClick={() => openEditSlideModal(slide)}
+                                className="bg-white hover:bg-[#e8eeff] text-[#082f89] border border-slate-200 p-2 rounded-xl transition-colors shadow-xs"
+                                title="Edit Slide"
+                              >
+                                <Edit3 size={15} />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteSlide(slide.id, slide.titleLine1)}
+                                className="bg-white hover:bg-[#fee2e2] text-[#f00102] border border-slate-200 p-2 rounded-xl transition-colors shadow-xs"
+                                title="Delete Slide"
+                              >
+                                <Trash2 size={15} />
+                              </button>
+                            </div>
+                          </div>
+
+                          <div className="flex gap-4 items-center pt-2">
+                            <div className="w-24 h-24 rounded-2xl bg-white border border-slate-200 flex items-center justify-center p-2 shrink-0 shadow-xs">
+                              <img
+                                src={slide.image}
+                                alt={slide.titleLine1}
+                                className="w-full h-full object-contain"
+                              />
+                            </div>
+                            <div className="space-y-1 min-w-0">
+                              <h3 className="font-black text-[#07152e] text-base leading-snug truncate">
+                                {slide.titleLine1}
+                              </h3>
+                              {slide.titleLine2 && (
+                                <p className="font-bold text-[#082f89] text-xs leading-tight truncate">
+                                  {slide.titleLine2}
+                                </p>
+                              )}
+                              <p className="text-[11px] text-[#64748b] line-clamp-2 mt-1">
+                                {slide.subtitle || 'No subtitle provided'}
+                              </p>
+                              <p className="text-xs font-black text-[#01a345] pt-1">
+                                ₹{slide.price || 3499}
+                              </p>
+                            </div>
+                          </div>
+
+                          {/* Floating Badges Preview */}
+                          <div className="flex flex-wrap gap-2 pt-2 border-t border-slate-200/70 text-[10.5px]">
+                            {slide.floatTopLeft?.title && (
+                              <span className="bg-white border border-slate-200 px-2.5 py-1 rounded-lg text-slate-700 font-bold">
+                                🎙️ {slide.floatTopLeft.title}
+                              </span>
+                            )}
+                            {slide.floatRight?.title && (
+                              <span className="bg-white border border-slate-200 px-2.5 py-1 rounded-lg text-slate-700 font-bold">
+                                💾 {slide.floatRight.title}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Specs row */}
+                        {Array.isArray(slide.specs) && slide.specs.length > 0 && (
+                          <div className="grid grid-cols-3 gap-2 mt-4 pt-3 border-t border-slate-200 bg-white/60 p-2.5 rounded-xl text-center">
+                            {slide.specs.map((s, sIdx) => (
+                              <div key={sIdx}>
+                                <p className="font-black text-[11.5px] text-[#082f89] truncate">{s.value}</p>
+                                <p className="text-[9.5px] text-slate-400 font-semibold truncate">{s.label}</p>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </>
         )}
       </main>
+
+      {/* Hero Slide Add / Edit Modal */}
+      {isSlideModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl max-w-2xl w-full p-6 md:p-8 shadow-2xl relative animate-scaleUp my-8 max-h-[90vh] overflow-y-auto">
+            <button
+              onClick={() => setIsSlideModalOpen(false)}
+              className="absolute top-5 right-5 text-slate-400 hover:text-slate-600 bg-slate-100 p-2 rounded-full transition-colors"
+            >
+              <X size={18} />
+            </button>
+
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-10 h-10 rounded-2xl bg-[#e8eeff] text-[#082f89] flex items-center justify-center font-black">
+                <Sliders size={20} />
+              </div>
+              <div>
+                <h3 className="text-xl font-black text-[#07152e]">
+                  {editingSlide ? 'Edit Hero Carousel Slide' : 'Add New Hero Carousel Slide'}
+                </h3>
+                <p className="text-xs text-[#64748b] font-medium">Update the banner content and specifications live.</p>
+              </div>
+            </div>
+
+            <form onSubmit={handleSlideSubmit} className="space-y-4">
+              <div className="grid sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-black text-[#07152e] uppercase mb-1">Badge Tag</label>
+                  <input
+                    type="text"
+                    value={slideFormData.badge}
+                    onChange={(e) => setSlideFormData({ ...slideFormData, badge: e.target.value })}
+                    placeholder="Expert's Choice"
+                    className="w-full px-3.5 py-2.5 bg-[#f8fafc] border border-slate-200 rounded-xl text-xs font-bold text-[#07152e] focus:outline-none focus:ring-2 focus:ring-[#082f89]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-black text-[#07152e] uppercase mb-1">Display Price (₹)</label>
+                  <input
+                    type="number"
+                    value={slideFormData.price}
+                    onChange={(e) => setSlideFormData({ ...slideFormData, price: e.target.value })}
+                    placeholder="3499"
+                    className="w-full px-3.5 py-2.5 bg-[#f8fafc] border border-slate-200 rounded-xl text-xs font-bold text-[#07152e] focus:outline-none focus:ring-2 focus:ring-[#082f89]"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-black text-[#07152e] uppercase mb-1">Title Line 1 *</label>
+                <input
+                  type="text"
+                  value={slideFormData.titleLine1}
+                  onChange={(e) => setSlideFormData({ ...slideFormData, titleLine1: e.target.value })}
+                  placeholder="Complete Home Security / Baby Cameras"
+                  className="w-full px-3.5 py-2.5 bg-[#f8fafc] border border-slate-200 rounded-xl text-xs font-bold text-[#07152e] focus:outline-none focus:ring-2 focus:ring-[#082f89]"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-black text-[#07152e] uppercase mb-1">Title Line 2 (Highlighted in Blue)</label>
+                <input
+                  type="text"
+                  value={slideFormData.titleLine2}
+                  onChange={(e) => setSlideFormData({ ...slideFormData, titleLine2: e.target.value })}
+                  placeholder="with AI motion detection"
+                  className="w-full px-3.5 py-2.5 bg-[#f8fafc] border border-slate-200 rounded-xl text-xs font-bold text-[#07152e] focus:outline-none focus:ring-2 focus:ring-[#082f89]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-black text-[#07152e] uppercase mb-1">Subtitle / Summary</label>
+                <textarea
+                  value={slideFormData.subtitle}
+                  onChange={(e) => setSlideFormData({ ...slideFormData, subtitle: e.target.value })}
+                  rows={2}
+                  placeholder="Complete 360° Security - Triple the Coverage, Triple the Peace of Mind."
+                  className="w-full px-3.5 py-2.5 bg-[#f8fafc] border border-slate-200 rounded-xl text-xs font-medium text-[#07152e] focus:outline-none focus:ring-2 focus:ring-[#082f89]"
+                />
+              </div>
+
+              {/* Image Uploader & Preview */}
+              <div>
+                <label className="block text-xs font-black text-[#07152e] uppercase mb-1">Slide Product Image</label>
+                <div className="flex items-center gap-4">
+                  {slideFormData.image && (
+                    <div className="w-16 h-16 rounded-xl bg-white border border-slate-200 p-1 flex items-center justify-center shrink-0 shadow-xs overflow-hidden">
+                      <img
+                        src={resolveImageUrl(slideFormData.image)}
+                        alt="Preview"
+                        className="w-full h-full object-contain"
+                        onError={(e) => {
+                          e.target.style.display = 'none';
+                        }}
+                      />
+                    </div>
+                  )}
+                  <div className="flex-1 space-y-2">
+                    <input
+                      type="text"
+                      value={slideFormData.image}
+                      onChange={(e) => setSlideFormData({ ...slideFormData, image: e.target.value })}
+                      placeholder="Paste Cloudinary URL or upload below"
+                      className="w-full px-3.5 py-2 bg-[#f8fafc] border border-slate-200 rounded-xl text-xs font-bold text-[#07152e]"
+                    />
+                    <label
+                      htmlFor="hero-slide-file-input"
+                      className="inline-flex items-center gap-2 bg-[#082f89] hover:bg-[#0e45c4] text-white px-3.5 py-2 rounded-xl text-xs font-bold cursor-pointer transition-colors shadow-sm active:scale-95"
+                    >
+                      <Upload size={14} className={uploadingSlideImage ? 'animate-bounce' : ''} />
+                      <span>{uploadingSlideImage ? 'Uploading to Cloudinary...' : 'Upload Image to Cloudinary'}</span>
+                    </label>
+                    <input
+                      id="hero-slide-file-input"
+                      type="file"
+                      accept="image/*"
+                      onChange={handleSlideImageUpload}
+                      className="hidden"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Floating Badges */}
+              <div className="border border-slate-200 bg-slate-50 p-3.5 rounded-2xl space-y-3">
+                <p className="text-xs font-black text-[#07152e]">Floating Highlight Badges</p>
+                <div className="grid sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-bold text-[#64748b] mb-1">Top-Left Badge Text</label>
+                    <input
+                      type="text"
+                      value={slideFormData.floatTopLeftTitle}
+                      onChange={(e) => setSlideFormData({ ...slideFormData, floatTopLeftTitle: e.target.value })}
+                      placeholder="2 Way Talk"
+                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-[#64748b] mb-1">Bottom-Right Badge Text</label>
+                    <input
+                      type="text"
+                      value={slideFormData.floatRightTitle}
+                      onChange={(e) => setSlideFormData({ ...slideFormData, floatRightTitle: e.target.value })}
+                      placeholder="SD Card + Cloud"
+                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Specs Grid */}
+              <div className="border border-slate-200 bg-slate-50 p-3.5 rounded-2xl space-y-3">
+                <p className="text-xs font-black text-[#07152e]">Key Technical Specifications (3 Points)</p>
+                <div className="grid grid-cols-3 gap-2">
+                  <div>
+                    <input
+                      type="text"
+                      value={slideFormData.spec1Value}
+                      onChange={(e) => setSlideFormData({ ...slideFormData, spec1Value: e.target.value })}
+                      placeholder="Value: 5MP + 5MP"
+                      className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-[11px] font-bold mb-1"
+                    />
+                    <input
+                      type="text"
+                      value={slideFormData.spec1Label}
+                      onChange={(e) => setSlideFormData({ ...slideFormData, spec1Label: e.target.value })}
+                      placeholder="Label: Full HD Lens"
+                      className="w-full px-2.5 py-1 bg-white border border-slate-200 rounded-lg text-[10px]"
+                    />
+                  </div>
+                  <div>
+                    <input
+                      type="text"
+                      value={slideFormData.spec2Value}
+                      onChange={(e) => setSlideFormData({ ...slideFormData, spec2Value: e.target.value })}
+                      placeholder="Value: 30m IR"
+                      className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-[11px] font-bold mb-1"
+                    />
+                    <input
+                      type="text"
+                      value={slideFormData.spec2Label}
+                      onChange={(e) => setSlideFormData({ ...slideFormData, spec2Label: e.target.value })}
+                      placeholder="Label: Color Night Vision"
+                      className="w-full px-2.5 py-1 bg-white border border-slate-200 rounded-lg text-[10px]"
+                    />
+                  </div>
+                  <div>
+                    <input
+                      type="text"
+                      value={slideFormData.spec3Value}
+                      onChange={(e) => setSlideFormData({ ...slideFormData, spec3Value: e.target.value })}
+                      placeholder="Value: 360°"
+                      className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-[11px] font-bold mb-1"
+                    />
+                    <input
+                      type="text"
+                      value={slideFormData.spec3Label}
+                      onChange={(e) => setSlideFormData({ ...slideFormData, spec3Label: e.target.value })}
+                      placeholder="Label: Pan Tilt"
+                      className="w-full px-2.5 py-1 bg-white border border-slate-200 rounded-lg text-[10px]"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-200">
+                <button
+                  type="button"
+                  onClick={() => setIsSlideModalOpen(false)}
+                  className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-[#07152e] text-xs font-bold rounded-xl transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-6 py-2.5 bg-[#082f89] hover:bg-[#0e45c4] text-white text-xs font-black rounded-xl shadow-md transition-all active:scale-95"
+                >
+                  {editingSlide ? 'Save Changes' : 'Create Slide'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* View Selected Inquiry Detail Modal */}
       {selectedMessage && (

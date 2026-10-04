@@ -1,6 +1,9 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { dealsProducts, newArrivals, bestSellers } from '../mock/mock';
-import { fetchProductsFromAPI, addProductAPI, updateProductAPI, deleteProductAPI, deleteAllProductsAPI } from '../services/api';
+import { dealsProducts, newArrivals, bestSellers, heroSlides as initialHeroSlides } from '../mock/mock';
+import { 
+  fetchProductsFromAPI, addProductAPI, updateProductAPI, deleteProductAPI, deleteAllProductsAPI,
+  fetchHeroSlidesAPI, addHeroSlideAPI, updateHeroSlideAPI, deleteHeroSlideAPI
+} from '../services/api';
 import ProductDetailModal from '../components/ProductDetailModal';
 
 const ProductContext = createContext();
@@ -62,6 +65,19 @@ export const ProductProvider = ({ children }) => {
   const [error, setError] = useState(null);
   const [selectedProduct, setSelectedProduct] = useState(null);
 
+  // Hero Slides State
+  const [heroSlides, setHeroSlides] = useState(() => {
+    try {
+      const saved = localStorage.getItem('rgms_hero_slides');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {}
+    return initialHeroSlides;
+  });
+  const [heroSlidesLoading, setHeroSlidesLoading] = useState(false);
+
   const openProductModal = (product) => {
     setSelectedProduct(product);
   };
@@ -101,9 +117,28 @@ export const ProductProvider = ({ children }) => {
     }
   }, []);
 
+  // Fetch Hero Slides from Backend API
+  const refreshHeroSlides = useCallback(async () => {
+    setHeroSlidesLoading(true);
+    try {
+      const apiSlides = await fetchHeroSlidesAPI();
+      if (apiSlides && Array.isArray(apiSlides) && apiSlides.length > 0) {
+        setHeroSlides(apiSlides);
+        try {
+          localStorage.setItem('rgms_hero_slides', JSON.stringify(apiSlides));
+        } catch (e) {}
+      }
+    } catch (err) {
+      console.warn('Using cached hero slides state:', err.message);
+    } finally {
+      setHeroSlidesLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     refreshProducts();
-  }, [refreshProducts]);
+    refreshHeroSlides();
+  }, [refreshProducts, refreshHeroSlides]);
 
   // Add Product (calls backend REST API + updates frontend state)
   const addProduct = async (newProdData) => {
@@ -203,6 +238,66 @@ export const ProductProvider = ({ children }) => {
     localStorage.setItem('rgms_products', JSON.stringify([]));
   };
 
+  // Hero Slide CRUD actions
+  const addHeroSlide = async (slideData) => {
+    try {
+      const res = await addHeroSlideAPI(slideData);
+      const newSlide = res.slide || res;
+      setHeroSlides((prev) => {
+        const updated = [...prev, newSlide];
+        localStorage.setItem('rgms_hero_slides', JSON.stringify(updated));
+        return updated;
+      });
+      return newSlide;
+    } catch (err) {
+      const token = localStorage.getItem('rgms_admin_token');
+      if (token) throw err;
+      const fallbackSlide = {
+        id: `slide-${Date.now()}`,
+        ...slideData
+      };
+      setHeroSlides((prev) => {
+        const updated = [...prev, fallbackSlide];
+        localStorage.setItem('rgms_hero_slides', JSON.stringify(updated));
+        return updated;
+      });
+      return fallbackSlide;
+    }
+  };
+
+  const updateHeroSlide = async (id, slideData) => {
+    try {
+      const res = await updateHeroSlideAPI(id, slideData);
+      const updatedSlide = res.slide || res;
+      setHeroSlides((prev) => {
+        const updated = prev.map((s) => (s.id === id ? updatedSlide : s));
+        localStorage.setItem('rgms_hero_slides', JSON.stringify(updated));
+        return updated;
+      });
+      return updatedSlide;
+    } catch (err) {
+      const token = localStorage.getItem('rgms_admin_token');
+      if (token) throw err;
+      setHeroSlides((prev) => {
+        const updated = prev.map((s) => (s.id === id ? { ...s, ...slideData } : s));
+        localStorage.setItem('rgms_hero_slides', JSON.stringify(updated));
+        return updated;
+      });
+      return { id, ...slideData };
+    }
+  };
+
+  const deleteHeroSlide = async (id) => {
+    try {
+      await deleteHeroSlideAPI(id);
+    } catch (err) {}
+    setHeroSlides((prev) => {
+      const updated = prev.filter((s) => s.id !== id);
+      localStorage.setItem('rgms_hero_slides', JSON.stringify(updated));
+      return updated;
+    });
+  };
+
   // Section specific getters strictly controlled by Admin placement checkboxes
   const dealsProductsList = products.filter((p) => Boolean(p.isDeal));
   const newArrivalsList = products.filter((p) => Boolean(p.isNewArrival));
@@ -224,7 +319,14 @@ export const ProductProvider = ({ children }) => {
         addProduct,
         updateProduct,
         deleteProduct,
-        clearAllProducts
+        clearAllProducts,
+        // Hero Slides
+        heroSlides,
+        heroSlidesLoading,
+        refreshHeroSlides,
+        addHeroSlide,
+        updateHeroSlide,
+        deleteHeroSlide
       }}
     >
       {children}

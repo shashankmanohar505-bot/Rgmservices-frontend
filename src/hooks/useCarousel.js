@@ -9,7 +9,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
  *  - Pagination dot state via IntersectionObserver
  *  - Respects prefers-reduced-motion
  */
-export default function useCarousel({ autoplay = false, interval = 5000, itemSelector = '[data-slide]' } = {}) {
+export default function useCarousel({ autoplay = false, interval = 5000, itemSelector = '[data-slide]', pauseOnHover = true } = {}) {
   const [scrollerNode, setScrollerNode] = useState(null);
   const scrollerRef = useRef(null);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -186,8 +186,8 @@ export default function useCarousel({ autoplay = false, interval = 5000, itemSel
     onMouseLeave: endDrag,
     onClickCapture,
     onKeyDown,
-    onMouseEnter: () => setIsPaused(true),
-    onFocus: () => setIsPaused(true),
+    onMouseEnter: () => { if (pauseOnHover) setIsPaused(true); },
+    onFocus: () => { if (pauseOnHover) setIsPaused(true); },
     onBlur: () => setIsPaused(false),
     onPointerLeave: () => setIsPaused(false),
     style: { cursor: 'grab', touchAction: 'pan-x pan-y' },

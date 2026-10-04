@@ -112,7 +112,7 @@ export const uploadProductImageAPI = async (imageFileOrBase64) => {
 
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Image upload failed');
-    return data.url;
+    return resolveImageUrl(data.url);
   } catch (err) {
     console.error('Image upload service error:', err);
     throw err;
@@ -291,3 +291,90 @@ export const deleteContactMessageAPI = async (id) => {
     return { message: 'Deleted locally', id };
   }
 };
+
+// ================= HERO CAROUSEL SLIDES API ================= //
+
+export const fetchHeroSlidesAPI = async () => {
+  try {
+    const baseUrl = await getApiBase();
+    const res = await fetch(`${baseUrl}/hero-slides`, {
+      signal: AbortSignal.timeout(8000)
+    });
+    if (!res.ok) throw new Error('Failed to fetch hero slides');
+    const data = await res.json();
+    if (Array.isArray(data)) {
+      return data.map(s => ({
+        ...s,
+        image: resolveImageUrl(s.image)
+      }));
+    }
+    return data;
+  } catch (err) {
+    console.warn('Backend hero slides API fetch error:', err.message);
+    return null;
+  }
+};
+
+export const addHeroSlideAPI = async (slideData) => {
+  const baseUrl = await getApiBase();
+  const res = await fetch(`${baseUrl}/hero-slides`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...getAuthHeaders()
+    },
+    body: JSON.stringify(slideData)
+  });
+  if (!res.ok) {
+    const err = await res.json();
+    throw new Error(err.error || 'Failed to add hero slide');
+  }
+  const result = await res.json();
+  return {
+    ...result,
+    slide: {
+      ...result.slide,
+      image: resolveImageUrl(result.slide.image)
+    }
+  };
+};
+
+export const updateHeroSlideAPI = async (id, slideData) => {
+  const baseUrl = await getApiBase();
+  const res = await fetch(`${baseUrl}/hero-slides/${id}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      ...getAuthHeaders()
+    },
+    body: JSON.stringify(slideData)
+  });
+  if (!res.ok) {
+    const err = await res.json();
+    throw new Error(err.error || 'Failed to update hero slide');
+  }
+  const result = await res.json();
+  return {
+    ...result,
+    slide: {
+      ...result.slide,
+      image: resolveImageUrl(result.slide.image)
+    }
+  };
+};
+
+export const deleteHeroSlideAPI = async (id) => {
+  const baseUrl = await getApiBase();
+  const res = await fetch(`${baseUrl}/hero-slides/${id}`, {
+    method: 'DELETE',
+    headers: {
+      ...getAuthHeaders()
+    }
+  });
+  if (!res.ok) {
+    const err = await res.json();
+    throw new Error(err.error || 'Failed to delete hero slide');
+  }
+  return await res.json();
+};
+

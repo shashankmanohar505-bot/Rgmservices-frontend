@@ -7,7 +7,7 @@ import { Sparkles } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const HeroBanner = () => {
-  const banner = useCarousel({ autoplay: true, interval: 5500 });
+  const banner = useCarousel({ autoplay: true, interval: 3500, pauseOnHover: false });
   const cats = useCarousel({ autoplay: false });
 
   return (
@@ -20,13 +20,13 @@ const HeroBanner = () => {
         <NavArrow dir="left" onClick={banner.prev} className="absolute left-1 lg:-left-2 top-1/2 -translate-y-1/2 hidden sm:flex" label="Previous banner" />
         <div
           {...banner.scrollerProps}
-          className="flex gap-4 sm:gap-5 overflow-x-auto scrollbar-hide snap-x snap-mandatory px-1 focus:outline-none -mx-4 sm:mx-0 px-4 sm:px-1"
+          className="flex gap-4 sm:gap-5 overflow-x-auto scrollbar-hide snap-x snap-mandatory focus:outline-none px-0 sm:px-1"
           aria-roledescription="carousel"
           aria-label="Featured banners"
           data-testid="hero-banner-scroller"
         >
           {heroBanners.map((b, i) => (
-            <div key={b.id} data-slide className="w-[88vw] sm:w-[calc(50%-10px)] lg:w-[calc(33.333%-14px)] flex-none snap-start" aria-roledescription="slide" aria-label={`${i + 1} of ${heroBanners.length}`}>
+            <div key={b.id} data-slide className="w-full sm:w-[calc(50%-10px)] lg:w-[calc(33.333%-14px)] flex-none snap-center" aria-roledescription="slide" aria-label={`${i + 1} of ${heroBanners.length}`}>
               <div className="rounded-3xl overflow-hidden aspect-[16/10] group cursor-pointer bg-[#f1f5f9] shadow-[0_8px_25px_rgba(8,47,137,0.08)] hover:shadow-[0_20px_45px_rgba(8,47,137,0.18)] border border-slate-200/80 transition-all duration-500 relative">
                 {/* Image */}
                 <img
