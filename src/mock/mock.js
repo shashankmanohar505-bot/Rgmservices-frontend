@@ -10,8 +10,8 @@ export const heroBanners = [
   { id: 2, image: `${A}/rgms-banner-2.png`, alt: 'Color Night Vision up to 15m' },
   { id: 3, image: `${A}/asset-2.jpeg`, alt: 'Smart Security Safer Homes - Get 5% Off' },
   { id: 4, image: `${A}/rgms-banner-3.png`, alt: 'AI Security Camera in India' },
-  { id: 5, image: `${A}/rgms-banner-4.png`, alt: 'Smart CCTV & Surveillance Security Solutions' },
-  { id: 6, image: `${A}/rgms-banner-5.png`, alt: 'RGMS Advanced AI Security Systems' },
+  { id: 5, image: `${A}/rgms-banner-4.webp`, alt: 'Smart CCTV & Surveillance Security Solutions' },
+  { id: 6, image: `${A}/rgms-banner-5.webp`, alt: 'RGMS Advanced AI Security Systems' },
 ];
 
 export const categories = [
